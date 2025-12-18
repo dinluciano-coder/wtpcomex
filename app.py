@@ -10,6 +10,62 @@ import numpy as np
 import glob
 
 # ==========================================
+# SISTEMA DE LOGIN SIMPLES (HARDCODED)
+# ==========================================
+def check_password():
+    """Retorna `True` se o usuário tiver a senha correta."""
+    
+    # --- CONFIGURE SUA SENHA AQUI ---
+    SENHA_CORRETA = "Wtp@327905" 
+    # --------------------------------
+    
+    def password_entered():
+        """Verifica se a senha inserida bate com a SENHA_CORRETA."""
+        if st.session_state["password"] == SENHA_CORRETA:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # Limpa a senha da memória temporária
+        else:
+            st.session_state["password_correct"] = False
+
+    # Se a senha já foi validada nesta sessão, retorna True e libera o app
+    if st.session_state.get("password_correct", False):
+        return True
+
+    # Se não validou, mostra a tela de login
+    st.markdown(f"""
+    <style>
+    .stTextInput {{max_width: 300px; margin: 0 auto;}}
+    </style>
+    <div style='text-align: center; margin-top: 80px; margin-bottom: 20px;'>
+        <h1 style='color: #02BD7E; font-family: Rajdhani, sans-serif;'>🔐 WTP ACCESS</h1>
+        <p style='color: #6B8E82; font-size: 0.9rem;'>Ambiente Seguro. Digite a credencial.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.text_input(
+        "Senha", 
+        type="password", 
+        on_change=password_entered, 
+        key="password",
+        placeholder="Senha de acesso..."
+    )
+    
+    if "password_correct" in st.session_state and not st.session_state["password_correct"]:
+        st.error("⛔ Senha incorreta.")
+
+    return False
+
+# --- TRAVA DE SEGURANÇA ---
+# Se a função retornar False (senha errada ou não digitada), o app para aqui.
+if not check_password():
+    st.stop()
+
+# ==========================================
+# O RESTO DO SEU CÓDIGO COMEÇA DAQUI PARA BAIXO...
+# ==========================================
+# data_res = get_data_engine()...
+
+# ==========================================
 # 1. SETUP & APPLE-GLASS DESIGN SYSTEM
 # ==========================================
 st.set_page_config(
@@ -1143,4 +1199,5 @@ with tab5:
         st.warning("Catálogo offline.")
 
 st.markdown("---")
+
 st.markdown(f"<div style='text-align:center; color:{THEME['sub']}; font-size:12px;'>WTP ULTRASONIC • EMERALD GLASS OS v70.0 • {datetime.now().year}</div>", unsafe_allow_html=True)
