@@ -16,7 +16,7 @@ def check_password():
     """Retorna `True` se o usuário tiver a senha correta."""
     
     # --- CONFIGURE SUA SENHA AQUI ---
-    SENHA_CORRETA = "Wtp@327905" 
+    SENHA_CORRETA = "Wtpcomex" 
     # --------------------------------
     
     def password_entered():
@@ -1201,3 +1201,4 @@ with tab5:
 st.markdown("---")
 
 st.markdown(f"<div style='text-align:center; color:{THEME['sub']}; font-size:12px;'>WTP ULTRASONIC • EMERALD GLASS OS v70.0 • {datetime.now().year}</div>", unsafe_allow_html=True)
+
