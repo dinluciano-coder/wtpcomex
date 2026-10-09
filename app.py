@@ -922,8 +922,8 @@ common_layout = dict(
     margin=dict(l=15, r=15, t=35, b=20),
     xaxis=dict(showgrid=False, zeroline=False, tickfont=dict(color=THEME['text_muted'])),
     yaxis=dict(showgrid=True, gridcolor='rgba(255, 255, 255, 0.05)', zeroline=False, tickfont=dict(color=THEME['text_muted']), automargin=True),
-    hovermode="x unified",
-    hoverlabel=dict(bgcolor="rgba(17, 24, 39, 0.95)", bordercolor=THEME['accent_primary'], font_size=12, font_family="Plus Jakarta Sans")
+    hovermode="closest",
+    hoverlabel=dict(bgcolor="rgba(11, 15, 23, 0.95)", bordercolor=THEME['accent_primary'], font_size=12, font_family="Plus Jakarta Sans")
 )
 chart_config = {'displayModeBar': False, 'responsive': True}
 
@@ -984,7 +984,7 @@ with tabs[0]:
                 line=dict(color=THEME['accent_mint'], width=2, dash='dot')
             ))
             
-        fig_evol.update_layout(common_layout, height=360)
+        fig_evol.update_layout(common_layout, hovermode="x unified", height=360)
         st.plotly_chart(fig_evol, use_container_width=True, config=chart_config)
         
     with c_met2:
@@ -1221,19 +1221,29 @@ with tabs[2]:
         )
         fig_scatter.update_traces(
             hovertemplate=(
-                "<b>%{hovertext}</b><br><br>"
-                "📦 <b>NCM:</b> %{customdata[0]}<br>"
-                "⚖️ <b>Peso:</b> %{customdata[1]}<br>"
-                "💵 <b>Preço Médio:</b> %{customdata[2]} / kg<br>"
-                "💰 <b>FOB Total:</b> %{customdata[3]}<extra></extra>"
+                "<span style='font-size:13px; font-weight:700; color:#34D399;'>🏢 %{hovertext}</span><br>"
+                "<span style='color:#94A3B8; font-size:11px;'>📦 NCM: %{customdata[0]}</span><br>"
+                "<span style='color:#E2E8F0;'>⚖️ Peso: <b>%{customdata[1]}</b></span><br>"
+                "<span style='color:#E2E8F0;'>💵 Preço Médio: <b>%{customdata[2]} / kg</b></span><br>"
+                "<span style='color:#38BDF8;'>💰 FOB Total: <b>%{customdata[3]}</b></span>"
+                "<extra></extra>"
             )
         )
         layout_scat = common_layout.copy()
-        layout_scat['height'] = 480
+        layout_scat['height'] = 520
+        layout_scat['hovermode'] = 'closest'
+        layout_scat['hoverdistance'] = 25
+        layout_scat['hoverlabel'] = dict(
+            bgcolor="rgba(11, 15, 23, 0.96)",
+            bordercolor=THEME['accent_primary'],
+            font=dict(family="Plus Jakarta Sans", size=12, color="#FFFFFF"),
+            align="left",
+            namelength=-1
+        )
         layout_scat['legend'] = dict(
             orientation="h",
             yanchor="top",
-            y=-0.25,
+            y=-0.22,
             xanchor="center",
             x=0.5,
             title=None,
@@ -1412,7 +1422,7 @@ with tabs[5]:
     with c_flw_h1:
         flw_mode = st.radio("Modelo Visual:", ["Sankey Dinâmico Executivo", "Sunburst Hierárquico Multi-Nível"], horizontal=True)
     with c_flw_h2:
-        top_stage_n = st.slider("Top N Conexões por Etapa:", min_value=3, max_value=15, value=7, help="Define a quantidade máxima de nós por coluna para manter o diagrama totalmente límpido, espaçoso e sem emaranhados.")
+        top_stage_n = st.slider("Top N Conexões por Etapa:", min_value=3, max_value=50, value=15, help="Define a quantidade máxima de nós por coluna (de 3 até 50 nós). O gráfico ajusta sua altura e espaçamento dinamicamente para preservar legibilidade máxima.")
     with c_flw_h3:
         min_fob_opt = st.selectbox(
             "Filtro de Relevância (FOB Mínimo):",
@@ -1490,7 +1500,7 @@ with tabs[5]:
                 values='VAL_SHOW', color='VAL_SHOW',
                 color_continuous_scale=[[0, '#064E3B'], [0.5, '#059669'], [1, THEME['accent_primary']]]
             )
-            fig_sun.update_layout(common_layout, height=650, coloraxis_showscale=False)
+            fig_sun.update_layout(common_layout, height=max(650, min(1400, 500 + (top_stage_n * 16))), coloraxis_showscale=False)
             fig_sun.update_traces(hovertemplate="<b>%{label}</b><br>Volume: " + ("R$ %{value:,.2f}" if is_brl else "$ %{value:,.2f}") + "<extra></extra>")
             st.plotly_chart(fig_sun, use_container_width=True, config=chart_config)
         else:
@@ -1542,10 +1552,14 @@ with tabs[5]:
                         else:
                             l_col.append(link_c)
 
+            # Ajuste de altura e espaçamento dinâmico proporcional à quantidade de nós (suporta até 50 nós com conforto visual)
+            sk_dyn_height = max(680, min(2400, 480 + (top_stage_n * 35)))
+            sk_dyn_pad = max(8, int(32 - (top_stage_n * 0.42)))
+
             fig_sk = go.Figure(data=[go.Sankey(
                 arrangement="snap",
                 node=dict(
-                    pad=30,
+                    pad=sk_dyn_pad,
                     thickness=22,
                     line=dict(color="rgba(255, 255, 255, 0.15)", width=1),
                     label=node_labels,
@@ -1562,7 +1576,7 @@ with tabs[5]:
             )])
             fig_sk.update_layout(
                 common_layout,
-                height=680,
+                height=sk_dyn_height,
                 margin=dict(l=15, r=15, t=30, b=20)
             )
             st.plotly_chart(fig_sk, use_container_width=True, config=chart_config)
