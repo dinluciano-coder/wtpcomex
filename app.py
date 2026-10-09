@@ -457,8 +457,16 @@ NCM_DESCRIPTIONS = {
 # ==========================================
 # 5. DATA ENGINE CONSOLIDATOR
 # ==========================================
+def get_comex_files_fingerprint():
+    patterns = ["Operações Concorrentes*.xlsx", "Operações Concorrentes*.csv", "PRODUTOS LOGCOMEX*.xlsx", "PRODUTOS LOGCOMEX*.csv"]
+    files = []
+    for p in patterns:
+        files.extend(glob.glob(p))
+    valid_files = [f for f in sorted(files) if not os.path.basename(f).startswith("~$")]
+    return tuple((os.path.basename(f), os.path.getmtime(f), os.path.getsize(f)) for f in valid_files)
+
 @st.cache_data(ttl=3600)
-def load_all_comex_data():
+def load_all_comex_data(_fingerprint=None):
     log_messages = []
     
     # 1. Carrega todas as planilhas de operações
@@ -610,8 +618,9 @@ def fetch_usd_exchange_rate():
         pass
     return 5.60, 0.0, 0.0
 
-# CARREGAMENTO DA BASE CONSOLIDADA
-df_ops_raw, df_cat_raw, load_logs = load_all_comex_data()
+# CARREGAMENTO DA BASE CONSOLIDADA COM CACHE REATIVO A NOVOS ARQUIVOS
+comex_fingerprint = get_comex_files_fingerprint()
+df_ops_raw, df_cat_raw, load_logs = load_all_comex_data(comex_fingerprint)
 if df_ops_raw is None or df_ops_raw.empty:
     st.error("❌ Nenhuma planilha de dados encontrada em `C:\\wtpcomex`. Verifique os arquivos.")
     st.stop()
@@ -1718,12 +1727,36 @@ with tabs[7]:
     if df_cat_raw is not None and not df_cat_raw.empty:
         df_cat_disp = df_cat_raw.copy()
         
+        # Filtros rápidos da aba de catálogo
+        c_cat1, c_cat2 = st.columns([2.5, 1])
+        with c_cat1:
+            q_cat = st.text_input("🔍 Buscar no Catálogo por Modelo, Marca ou NCM:", placeholder="Ex: ULTRASONIC, GERMANY, 84798999...", key="cat_search_q")
+        with c_cat2:
+            st.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+            csv_cat_bytes = df_cat_disp.to_csv(sep=';', decimal=',', index=False).encode('utf-8-sig')
+            st.download_button(
+                label="📥 Exportar Catálogo (.csv)",
+                data=csv_cat_bytes,
+                file_name=f"WTP_Catalogo_Tecnico_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+            
+        if q_cat:
+            q_u = q_cat.upper().strip()
+            mask_cat = pd.Series(False, index=df_cat_disp.index)
+            for search_field in ['NCM', 'Marca', 'Modelo', 'Descrição', 'Descrio']:
+                if search_field in df_cat_disp.columns:
+                    mask_cat = mask_cat | df_cat_disp[search_field].astype(str).str.upper().str.contains(q_u, na=False)
+            df_cat_disp = df_cat_disp[mask_cat]
+        
         # Formata colunas numéricas de valor se existirem
         for c in ['Estimativa de valor unitário', 'Provável quantidade estatística']:
             if c in df_cat_disp.columns:
-                df_cat_disp[c] = df_cat_disp[c].apply(lambda v: f"{float(v):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.') if pd.notna(v) else "")
+                df_cat_disp[c] = df_cat_disp[c].apply(lambda v: f"{float(v):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.') if pd.notna(v) and str(v).replace('.','').replace('-','').isdigit() else v)
                 
-        st.dataframe(df_cat_disp, use_container_width=True, height=550)
+        st.caption(f"Exibindo {len(df_cat_disp):,} de {len(df_cat_raw):,} itens do catálogo técnico consolidado.")
+        st.dataframe(df_cat_disp, use_container_width=True, height=520, hide_index=True)
     else:
         st.warning("Catálogo técnico não carregado.")
 
